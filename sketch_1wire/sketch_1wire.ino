@@ -25,7 +25,6 @@ OneWire oneWire[ONEWIRE_PINS] = {
 DallasTemperature sensors[ONEWIRE_PINS];
 DeviceAddress oneWhireSensorsUnique[ONEWIRE_NUMBER];
 int oneWireSensorsCount = 0;
-float temperature[ONEWIRE_NUMBER];
 
 byte pwmPins[PWM_NUMBER] = { // Uno 980hz
   5,
@@ -194,29 +193,29 @@ void readDS18(unsigned long interval) {
 
   unsigned long t = millis();
   if (t - poolTime > interval) {
-    byte tidx=0;
-    for (int pi = 0; pi < 2; pi++) {
+    byte tidx=0; float temp;
+    for (int pi = 0; pi < ONEWIRE_PINS; pi++) {
 
       if (poolTime > 0 && poolTime - convTime > interval) {
         for (int i = 0; i < sensors[pi].getDeviceCount(); i++) {
-          if (tidx < ONEWIRE_NUMBER) temperature[tidx++] = sensors[pi].getTempCByIndex(i);
-        }
+          if (tidx < ONEWIRE_NUMBER) {
+            temp = sensors[pi].getTempCByIndex(i);
+            modbusRegs[mbs_ds1+tidx]= (uint16_t)((temp + 127.f) * 255);
 
-        for (int i = 0; i < oneWireSensorsCount; i++) {
-          float ft = (float)temperature[i];
-          modbusRegs[mbs_ds1+i]= (uint16_t)((ft + 127.f) * 255);
-      
-      
-          if (DEBUG) {
-            Serial.print("DS ");
-            Serial.print(i);
-            Serial.print(" Temp C: ");
-            Serial.print(temperature[i]);
-            Serial.print(" REG: ");
-            Serial.print(modbusRegs[mbs_ds1+i]);
-            Serial.println();
+            if (DEBUG) {
+              Serial.print("DS ");
+              Serial.print(tidx);
+              Serial.print(" Temp C: ");
+              Serial.print(temp);
+              Serial.print(" REG: ");
+              Serial.print(modbusRegs[mbs_ds1+tidx]);
+              Serial.println();
+            }
+            tidx++;
           }
         }
+
+        
 
         convTime = t;
       }
